@@ -4,6 +4,8 @@ import com.example.flightbooking.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -16,6 +18,7 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
      * Handle validation errors from @Valid on request body
@@ -27,6 +30,8 @@ public class GlobalExceptionHandler {
         String message = ex.getBindingResult().getFieldErrors().stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.joining(", "));
+
+        logger.warn("Validation error on {}: {}", request.getRequestURI(), message);
 
         ErrorResponse errorResponse = new ErrorResponse(
                 Instant.now(),
@@ -50,6 +55,8 @@ public class GlobalExceptionHandler {
                 .map(ConstraintViolation::getMessage)
                 .collect(Collectors.joining(", "));
 
+        logger.warn("Constraint violation on {}: {}", request.getRequestURI(), message);
+
         ErrorResponse errorResponse = new ErrorResponse(
                 Instant.now(),
                 HttpStatus.BAD_REQUEST.value(),
@@ -68,6 +75,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleNoSuchElementException(
             NoSuchElementException ex,
             HttpServletRequest request) {
+        logger.info("Resource not found on {}: {}", request.getRequestURI(), ex.getMessage());
+
         ErrorResponse errorResponse = new ErrorResponse(
                 Instant.now(),
                 HttpStatus.NOT_FOUND.value(),
@@ -86,6 +95,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleIllegalStateException(
             IllegalStateException ex,
             HttpServletRequest request) {
+        logger.info("Conflict on {}: {}", request.getRequestURI(), ex.getMessage());
+
         ErrorResponse errorResponse = new ErrorResponse(
                 Instant.now(),
                 HttpStatus.CONFLICT.value(),
@@ -104,6 +115,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
             IllegalArgumentException ex,
             HttpServletRequest request) {
+        logger.warn("Bad request on {}: {}", request.getRequestURI(), ex.getMessage());
+
         ErrorResponse errorResponse = new ErrorResponse(
                 Instant.now(),
                 HttpStatus.BAD_REQUEST.value(),
@@ -122,6 +135,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGenericException(
             Exception ex,
             HttpServletRequest request) {
+        logger.error("Unexpected error on {}: {}", request.getRequestURI(), ex.getMessage(), ex);
+
         ErrorResponse errorResponse = new ErrorResponse(
                 Instant.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),

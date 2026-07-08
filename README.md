@@ -82,19 +82,48 @@ A Spring Boot 3 (Java 17, Maven) REST API for flight booking service with in-mem
 ### Build
 ```bash
 cd /Users/mansi/IdeaProjects/Flightbooking
-mvn -DskipTests package
+mvn clean package -DskipTests
 ```
 
-### Run
+### Run the Service
+
+**Option A: Using Maven (Recommended for Development)**
 ```bash
 mvn spring-boot:run
 ```
-or
+
+**Option B: Using Java JAR (Faster)**
 ```bash
 java -jar target/flightbooking-0.0.1-SNAPSHOT.jar
 ```
 
-The application starts on `http://localhost:8080`
+**Option C: Using Custom Port**
+```bash
+java -Dserver.port=9090 -jar target/flightbooking-0.0.1-SNAPSHOT.jar
+```
+
+The application starts on `http://localhost:8080` and displays logs like:
+```
+2026-07-08 15:30:45 - Creating flight: FL001 from New York to Los Angeles, 150 total seats
+2026-07-08 15:30:46 - Flight created successfully: FL001
+2026-07-08 15:30:47 - Tomcat started on port(s): 8080 (http)
+2026-07-08 15:30:47 - Application started successfully
+```
+
+### Verify Service is Running
+
+Open a **new terminal** and test:
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+Expected response:
+```json
+{"status":"UP"}
+```
+
+### Stop the Service
+Press `Ctrl+C` in the terminal where the service is running.
 
 ### Run Tests
 ```bash
@@ -103,9 +132,10 @@ mvn test
 
 # Run specific test class
 mvn test -Dtest=BookingServiceTest
+mvn test -Dtest=BookingIntegrationTest
 
-# Run with coverage (requires maven-surefire plugin)
-mvn test jacoco:report
+# Run with verbose output
+mvn test -X
 ```
 
 ### Test Endpoints (using curl)
@@ -264,6 +294,14 @@ mvn test -Dtest=BookingServiceTest#testConcurrentBookingNoProblem
 
 ## Implementation Notes
 
+- **Logging**:
+  - SLF4J logging integrated throughout service layer
+  - INFO level: Flight creation, booking confirmation, cancellations, key operations
+  - DEBUG level: Detailed operations (seat availability checks, seat restoration)
+  - WARN level: Validation failures, conflicts
+  - ERROR level: Unexpected exceptions
+  - Global exception handler logs all exceptions with context
+  - Configure in `application.properties`: `logging.level.com.example.flightbooking=DEBUG`
 - **Error Handling**: 
   - Global exception handler (@RestControllerAdvice) converts all exceptions to consistent JSON error responses
   - Error response format: `timestamp`, `status`, `error`, `message`, `path`
@@ -317,3 +355,93 @@ mvn test -Dtest=BookingServiceTest#testConcurrentBookingNoProblem
 - Add controller/integration tests
 - Add OpenAPI/Swagger documentation
 
+
+
+## How to run the service
+
+java -version
+
+# macOS with Homebrew
+brew install openjdk@17
+
+# macOS with Homebrew
+brew install maven
+
+# Or SDKMAN
+curl -s "https://get.sdkman.io" | bash
+source "$HOME/.sdkman/bin/sdkman-init.sh"
+sdk install maven
+
+cd /Users/mansi/IdeaProjects/Flightbooking
+
+# Build (skip tests for speed)
+mvn clean package -DskipTests
+
+mvn spring-boot:run
+
+# Check health
+curl http://localhost:8080/actuator/health
+
+# Testing the API
+# Create a Flight
+
+curl -X POST http://localhost:8080/flights \
+-H "Content-Type: application/json" \
+-d '{
+"flightNumber": "FL001",
+"origin": "New York",
+"destination": "Los Angeles",
+"departureTime": "2026-07-15T10:00:00Z",
+"totalSeats": 150
+}'
+
+# Get a flight
+
+curl http://localhost:8080/flights/FL001
+
+# Create a booking 
+curl -X POST http://localhost:8080/flights/FL001/bookings \
+-H "Content-Type: application/json" \
+-d '{
+"passengerName": "John Doe",
+"passengerEmail": "john@example.com",
+"seatCount": 2
+}'
+
+# Cancel a Booking 
+
+curl -X DELETE http://localhost:8080/bookings/550e8400-e29b-41d4-a716-446655440000
+
+
+# Run all tests
+mvn test
+
+# Run specific test class
+mvn test -Dtest=BookingServiceTest
+
+# Run with verbose output
+mvn test -X
+
+
+
+## What would i have done if i had more time
+
+# Rate Limiting
+- Max 100 requests/minute per IP
+- Would protect from DDoS
+
+# Soft deletes 
+- Better for audit trails and recovery
+
+# Audit Trails
+- Who created it, when, what changed
+- Required for compliance
+
+# Caching
+- Cache popular routes
+- Reduce database hits
+- 
+# Production ready
+  Database + JPA - Makes it persistent and scalable
+  Swagger + API Docs - Makes it usable by other teams
+  JWT Auth - Makes it secure for multi-tenant use
