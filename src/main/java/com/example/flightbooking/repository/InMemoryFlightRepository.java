@@ -15,7 +15,10 @@ public class InMemoryFlightRepository implements FlightRepository {
 
     @Override
     public Flight save(Flight flight) {
-        store.put(flight.getId(), flight);
+        if (flight.getFlightNumber() == null) {
+            throw new IllegalArgumentException("flightNumber must not be null");
+        }
+        store.put(flight.getFlightNumber(), flight);
         return flight;
     }
 

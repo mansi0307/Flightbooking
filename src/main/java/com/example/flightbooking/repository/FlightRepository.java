@@ -8,10 +8,10 @@ import java.util.Optional;
 public interface FlightRepository {
     Flight save(Flight flight);
 
-    Optional<Flight> findById(String id);
+    Optional<Flight> findById(String flightNumber);
 
     List<Flight> findAll();
 
-    void deleteById(String id);
+    void deleteById(String flightNumber);
 }
 

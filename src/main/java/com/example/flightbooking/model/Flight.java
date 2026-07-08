@@ -1,32 +1,36 @@
 package com.example.flightbooking.model;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Objects;
 
 public class Flight {
-    private String id;
+    /** Unique identifier for a flight (business key) */
+    private String flightNumber;
+
     private String origin;
     private String destination;
-    private LocalDateTime departureTime;
-    private int capacity;
+    private Instant departureTime;
+    private int totalSeats;
+    private int availableSeats;
 
     public Flight() {
     }
 
-    public Flight(String id, String origin, String destination, LocalDateTime departureTime, int capacity) {
-        this.id = id;
+    public Flight(String flightNumber, String origin, String destination, Instant departureTime, int totalSeats, int availableSeats) {
+        this.flightNumber = flightNumber;
         this.origin = origin;
         this.destination = destination;
         this.departureTime = departureTime;
-        this.capacity = capacity;
+        this.totalSeats = totalSeats;
+        this.availableSeats = availableSeats;
     }
 
-    public String getId() {
-        return id;
+    public String getFlightNumber() {
+        return flightNumber;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setFlightNumber(String flightNumber) {
+        this.flightNumber = flightNumber;
     }
 
     public String getOrigin() {
@@ -45,20 +49,28 @@ public class Flight {
         this.destination = destination;
     }
 
-    public LocalDateTime getDepartureTime() {
+    public Instant getDepartureTime() {
         return departureTime;
     }
 
-    public void setDepartureTime(LocalDateTime departureTime) {
+    public void setDepartureTime(Instant departureTime) {
         this.departureTime = departureTime;
     }
 
-    public int getCapacity() {
-        return capacity;
+    public int getTotalSeats() {
+        return totalSeats;
     }
 
-    public void setCapacity(int capacity) {
-        this.capacity = capacity;
+    public void setTotalSeats(int totalSeats) {
+        this.totalSeats = totalSeats;
+    }
+
+    public int getAvailableSeats() {
+        return availableSeats;
+    }
+
+    public void setAvailableSeats(int availableSeats) {
+        this.availableSeats = availableSeats;
     }
 
     @Override
@@ -66,12 +78,12 @@ public class Flight {
         if (this == o) return true;
         if (!(o instanceof Flight)) return false;
         Flight flight = (Flight) o;
-        return Objects.equals(id, flight.id);
+        return Objects.equals(flightNumber, flight.flightNumber);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(flightNumber);
     }
 }
 
