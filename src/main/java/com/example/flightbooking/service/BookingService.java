@@ -78,16 +78,48 @@ public class BookingService {
         return bookingRepository.save(booking);
     }
 
+    /**
+     * Cancels a booking and restores seats to the flight atomically.
+     * Synchronizes on the flight object to ensure atomicity of seat restoration.
+     *
+     * @param bookingId the booking ID
+     * @throws java.util.NoSuchElementException if booking not found
+     * @throws IllegalStateException if booking is already cancelled
+     */
+    public void cancelBooking(UUID bookingId) {
+        // Get booking (throws if not found)
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new java.util.NoSuchElementException("Booking with bookingId " + bookingId + " not found"));
+
+        // Check if already cancelled
+        if (booking.getStatus() == Booking.Status.CANCELLED) {
+            throw new IllegalStateException("Booking is already cancelled");
+        }
+
+        // Get flight (throws if not found)
+        Flight flight = flightRepository.findById(booking.getFlightNumber())
+                .orElseThrow(() -> new java.util.NoSuchElementException("Flight with flightNumber " + booking.getFlightNumber() + " not found"));
+
+        // Synchronize on the flight object for atomic seat restoration
+        synchronized (flight) {
+            // Restore available seats
+            flight.setAvailableSeats(flight.getAvailableSeats() + booking.getSeatCount());
+
+            // Update flight in repository
+            flightRepository.save(flight);
+        }
+
+        // Update booking status to CANCELLED
+        booking.setStatus(Booking.Status.CANCELLED);
+        bookingRepository.save(booking);
+    }
+
     public Optional<Booking> getBookingById(UUID bookingId) {
         return bookingRepository.findById(bookingId);
     }
 
     public java.util.List<Booking> listAll() {
         return bookingRepository.findAll();
-    }
-
-    public void deleteBooking(UUID bookingId) {
-        bookingRepository.deleteById(bookingId);
     }
 }
 

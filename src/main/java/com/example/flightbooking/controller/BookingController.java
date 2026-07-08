@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/flights/{flightNumber}/bookings")
@@ -42,4 +43,30 @@ public class BookingController {
         }
     }
 }
+
+@RestController
+@RequestMapping("/bookings")
+class BookingCancelController {
+    private final BookingService bookingService;
+
+    public BookingCancelController(BookingService bookingService) {
+        this.bookingService = bookingService;
+    }
+
+    @DeleteMapping("/{bookingId}")
+    public ResponseEntity<?> cancelBooking(@PathVariable UUID bookingId) {
+        try {
+            bookingService.cancelBooking(bookingId);
+            return ResponseEntity.noContent().build();
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Error: " + e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("Conflict: " + e.getMessage());
+        }
+    }
+}
+
+
 

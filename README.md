@@ -66,6 +66,13 @@ A Spring Boot 3 (Java 17, Maven) REST API for flight booking service with in-mem
   - **404 Not Found**: Flight with `flightNumber` does not exist.
   - **409 Conflict**: Not enough available seats (`availableSeats < seatCount`). No overbooking allowed.
 
+#### Cancel Booking
+- **Endpoint**: `DELETE /bookings/{bookingId}`
+- **Response**:
+  - **204 No Content**: Booking cancelled successfully. Booking status changed to "CANCELLED", flight's `availableSeats` atomically restored by `seatCount`.
+  - **404 Not Found**: Booking with `bookingId` does not exist.
+  - **409 Conflict**: Booking is already cancelled.
+
 ## Build & Run
 
 ### Prerequisites
@@ -120,6 +127,11 @@ curl -X POST http://localhost:8080/flights/FL001/bookings \
   }'
 ```
 
+Cancel a booking (replace UUID with actual bookingId):
+```bash
+curl -X DELETE http://localhost:8080/bookings/550e8400-e29b-41d4-a716-446655440000
+```
+
 Check health:
 ```bash
 curl http://localhost:8080/actuator/health
@@ -141,7 +153,11 @@ curl http://localhost:8080/actuator/health
     - Check if overbooking would occur
     - Atomically decrement available seats
     - Save booking
-  - Two concurrent booking requests for the same flight are serialized, preventing overbooking
+  - **Booking cancellation uses synchronization on the flight object** to ensure atomicity:
+    - Check booking status
+    - Restore available seats
+    - Atomically update flight and booking
+  - Two concurrent booking operations (create/cancel) for the same flight are serialized, preventing overbooking/inconsistency
 - **Time Format**: `departureTime` and `createdAt` use `java.time.Instant` (ISO 8601 format in JSON)
 - **Storage**: All data is stored in-memory and lost on application restart
 - **No Authentication**: No authentication/authorization layer implemented
