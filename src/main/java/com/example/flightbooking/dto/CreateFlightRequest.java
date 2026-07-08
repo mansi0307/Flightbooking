@@ -1,12 +1,25 @@
 package com.example.flightbooking.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+
 import java.time.Instant;
 
 public class CreateFlightRequest {
+    @NotBlank(message = "flightNumber must not be blank")
     private String flightNumber;
+
+    @NotBlank(message = "origin must not be blank")
     private String origin;
+
+    @NotBlank(message = "destination must not be blank")
     private String destination;
+
+    @NotNull(message = "departureTime must not be null")
     private Instant departureTime;
+
+    @Positive(message = "totalSeats must be greater than 0")
     private int totalSeats;
 
     public CreateFlightRequest() {

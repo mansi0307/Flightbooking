@@ -3,6 +3,7 @@ package com.example.flightbooking.controller;
 import com.example.flightbooking.dto.CreateFlightRequest;
 import com.example.flightbooking.model.Flight;
 import com.example.flightbooking.service.FlightService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,23 +18,15 @@ public class FlightController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createFlight(@RequestBody CreateFlightRequest request) {
-        try {
-            Flight flight = flightService.createFlight(
-                    request.getFlightNumber(),
-                    request.getOrigin(),
-                    request.getDestination(),
-                    request.getDepartureTime(),
-                    request.getTotalSeats()
-            );
-            return ResponseEntity.status(HttpStatus.CREATED).body(flight);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Invalid request: " + e.getMessage());
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Conflict: " + e.getMessage());
-        }
+    public ResponseEntity<?> createFlight(@Valid @RequestBody CreateFlightRequest request) {
+        Flight flight = flightService.createFlight(
+                request.getFlightNumber(),
+                request.getOrigin(),
+                request.getDestination(),
+                request.getDepartureTime(),
+                request.getTotalSeats()
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(flight);
     }
 
     @GetMapping("/{flightNumber}")

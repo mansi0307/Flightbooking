@@ -3,11 +3,11 @@ package com.example.flightbooking.controller;
 import com.example.flightbooking.dto.CreateBookingRequest;
 import com.example.flightbooking.model.Booking;
 import com.example.flightbooking.service.BookingService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @RestController
@@ -22,25 +22,14 @@ public class BookingController {
     @PostMapping
     public ResponseEntity<?> createBooking(
             @PathVariable String flightNumber,
-            @RequestBody CreateBookingRequest request) {
-        try {
-            Booking booking = bookingService.createBooking(
-                    flightNumber,
-                    request.getPassengerName(),
-                    request.getPassengerEmail(),
-                    request.getSeatCount()
-            );
-            return ResponseEntity.status(HttpStatus.CREATED).body(booking);
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Error: " + e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Invalid request: " + e.getMessage());
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body("Conflict: " + e.getMessage());
-        }
+            @Valid @RequestBody CreateBookingRequest request) {
+        Booking booking = bookingService.createBooking(
+                flightNumber,
+                request.getPassengerName(),
+                request.getPassengerEmail(),
+                request.getSeatCount()
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(booking);
     }
 }
 
@@ -55,16 +44,8 @@ class BookingCancelController {
 
     @DeleteMapping("/{bookingId}")
     public ResponseEntity<?> cancelBooking(@PathVariable UUID bookingId) {
-        try {
-            bookingService.cancelBooking(bookingId);
-            return ResponseEntity.noContent().build();
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Error: " + e.getMessage());
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body("Conflict: " + e.getMessage());
-        }
+        bookingService.cancelBooking(bookingId);
+        return ResponseEntity.noContent().build();
     }
 }
 

@@ -111,9 +111,27 @@ curl -X POST http://localhost:8080/flights \
   }'
 ```
 
+Test invalid flight (validation error returns 400):
+```bash
+curl -X POST http://localhost:8080/flights \
+  -H "Content-Type: application/json" \
+  -d '{
+    "flightNumber": "",
+    "origin": "New York",
+    "destination": "Los Angeles",
+    "departureTime": "2026-07-15T10:00:00Z",
+    "totalSeats": 150
+  }'
+```
+
 Get a flight:
 ```bash
 curl http://localhost:8080/flights/FL001
+```
+
+Test flight not found (returns 404):
+```bash
+curl http://localhost:8080/flights/NONEXISTENT
 ```
 
 Create a booking:
@@ -124,6 +142,17 @@ curl -X POST http://localhost:8080/flights/FL001/bookings \
     "passengerName": "John Doe",
     "passengerEmail": "john@example.com",
     "seatCount": 2
+  }'
+```
+
+Test invalid booking (validation error returns 400):
+```bash
+curl -X POST http://localhost:8080/flights/FL001/bookings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "passengerName": "",
+    "passengerEmail": "invalid-email",
+    "seatCount": 0
   }'
 ```
 
@@ -139,13 +168,32 @@ curl http://localhost:8080/actuator/health
 
 ## Implementation Notes
 
-- **Validation**: Fields are validated on service layer:
-  - `flightNumber`, `origin`, `destination` must not be null or empty
-  - `departureTime` must not be null
-  - `totalSeats` must be > 0
-  - `flightNumber` must be unique (duplicates return 400)
+- **Error Handling**: 
+  - Global exception handler (@RestControllerAdvice) converts all exceptions to consistent JSON error responses
+  - Error response format: `timestamp`, `status`, `error`, `message`, `path`
+  - Handles: validation errors, not-found errors, conflict errors, bad request errors
+  - Example error response:
+    ```json
+    {
+      "timestamp": "2026-07-08T15:30:45Z",
+      "status": 400,
+      "error": "Validation Failed",
+      "message": "flightNumber: flightNumber must not be blank, origin: origin must not be blank",
+      "path": "/flights"
+    }
+    ```
+
+- **Validation**: 
+  - Bean Validation annotations on request DTOs:
+    - `CreateFlightRequest`: @NotBlank on flightNumber/origin/destination, @NotNull on departureTime, @Positive on totalSeats
+    - `CreateBookingRequest`: @NotBlank on passengerName/passengerEmail, @Email on passengerEmail, @Positive on seatCount
+  - Fields are validated at controller level with @Valid
+  - Service layer also validates for additional safety
+  - `flightNumber` must be unique (duplicates return 409)
   - `passengerName`, `passengerEmail` must not be null or empty (for bookings)
   - `seatCount` must be > 0 (for bookings)
+  - `totalSeats` must be > 0 (for flights)
+  
 - **Thread Safety**: 
   - In-memory repositories use `ConcurrentHashMap` for thread-safe storage
   - **Booking creation uses synchronization on the flight object** to ensure atomicity:
@@ -158,16 +206,18 @@ curl http://localhost:8080/actuator/health
     - Restore available seats
     - Atomically update flight and booking
   - Two concurrent booking operations (create/cancel) for the same flight are serialized, preventing overbooking/inconsistency
+  
 - **Time Format**: `departureTime` and `createdAt` use `java.time.Instant` (ISO 8601 format in JSON)
 - **Storage**: All data is stored in-memory and lost on application restart
 - **No Authentication**: No authentication/authorization layer implemented
 
 ## Future Enhancements
 
-- Add booking endpoints (POST, GET, PATCH, DELETE)
-- Add filtering/search for flights
-- Add database persistence
+- Add GET /bookings/{bookingId} endpoint to retrieve a booking
+- Add GET /bookings endpoint to list all bookings
+- Add filtering/search for flights (by origin, destination, date range)
+- Add database persistence (JPA/Hibernate)
 - Add authentication & authorization
-- Add input validation with Bean Validation
 - Add unit & integration tests
+- Add OpenAPI/Swagger documentation
 
