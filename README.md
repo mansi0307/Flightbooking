@@ -96,6 +96,18 @@ java -jar target/flightbooking-0.0.1-SNAPSHOT.jar
 
 The application starts on `http://localhost:8080`
 
+### Run Tests
+```bash
+# Run all tests
+mvn test
+
+# Run specific test class
+mvn test -Dtest=BookingServiceTest
+
+# Run with coverage (requires maven-surefire plugin)
+mvn test jacoco:report
+```
+
 ### Test Endpoints (using curl)
 
 Create a flight:
@@ -166,6 +178,90 @@ Check health:
 curl http://localhost:8080/actuator/health
 ```
 
+## Unit & Integration Tests
+
+The project includes comprehensive tests covering:
+
+### Test Classes
+
+**BookingServiceTest** (Unit Tests with Mocks)
+- Successful booking creation with valid inputs
+- Booking on unknown flight (404 NoSuchElementException)
+- Booking more seats than available (409 Conflict)
+- Invalid passenger name/email validation
+- Invalid seat count validation
+- Booking cancellation success and seat restoration
+- Cancellation of already-cancelled booking
+- Cancellation of non-existent booking
+- Concurrent booking requests (10 threads for 10 seats) - no overbooking
+- Concurrent booking requests (10 threads for 5 seats) - excess requests rejected
+
+**FlightServiceTest** (Unit Tests with Mocks)
+- Successful flight creation
+- Duplicate flight detection (409)
+- Blank/null validation for all flight fields
+- Flight retrieval by number
+- Flight not found handling
+
+**BookingIntegrationTest** (Integration Tests with Real Repositories)
+- End-to-end flight creation and booking
+- Concurrent bookings with real repositories - 20 threads for 10 seats
+- Concurrent create and cancel operations - consistency check
+- Seat restoration atomicity on cancellation
+- Booking on non-existent flight
+- Cancellation of non-existent booking
+- Booking more seats than available
+
+### Test Coverage Summary
+
+| Scenario | Test Status | Thread Safety |
+|----------|-------------|----------------|
+| Successful booking | ✅ COVERED | N/A |
+| Booking unknown flight (404) | ✅ COVERED | N/A |
+| Overbooking attempt (409) | ✅ COVERED | ✅ ATOMIC |
+| Concurrent bookings (10 threads, 10 seats) | ✅ COVERED | ✅ SERIALIZED |
+| Concurrent bookings (20 threads, 10 seats) | ✅ COVERED | ✅ SERIALIZED |
+| Concurrent create + cancel | ✅ COVERED | ✅ CONSISTENT |
+| Seat restoration on cancel | ✅ COVERED | ✅ ATOMIC |
+| Validation errors | ✅ COVERED | N/A |
+
+### Running Tests
+
+```bash
+# Run all tests
+mvn test
+
+# Run specific test class
+mvn test -Dtest=BookingServiceTest
+mvn test -Dtest=FlightServiceTest
+mvn test -Dtest=BookingIntegrationTest
+
+# Run with verbose output
+mvn test -X
+
+# Run specific test method
+mvn test -Dtest=BookingServiceTest#testConcurrentBookingNoProblem
+```
+
+### Key Test Insights
+
+1. **Atomicity Guarantee**: Concurrent booking requests for the same flight are serialized via synchronized blocks on the flight object, ensuring:
+   - No two bookings can be processed simultaneously for the same flight
+   - Seat availability is checked and decremented atomically
+   - No race conditions between check and decrement
+
+2. **Thread Safety Verification**: Integration tests use `ExecutorService` with `CountDownLatch` to:
+   - Fire truly concurrent requests
+   - Verify exact count of successful/failed bookings
+   - Validate final seat count matches expected value
+   - Confirm no overbooking occurred
+
+3. **Error Handling**: Tests verify all exception cases:
+   - Validation errors via Bean Validation
+   - Not-found errors (404)
+   - Conflict errors (409)
+   - Service layer validation
+
 ## Implementation Notes
 
 - **Error Handling**: 
@@ -218,6 +314,6 @@ curl http://localhost:8080/actuator/health
 - Add filtering/search for flights (by origin, destination, date range)
 - Add database persistence (JPA/Hibernate)
 - Add authentication & authorization
-- Add unit & integration tests
+- Add controller/integration tests
 - Add OpenAPI/Swagger documentation
 
