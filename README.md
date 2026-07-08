@@ -39,6 +39,33 @@ A Spring Boot 3 (Java 17, Maven) REST API for flight booking service with in-mem
   - **200 OK**: Returns the flight object.
   - **404 Not Found**: Flight does not exist.
 
+### Bookings
+
+#### Create Booking
+- **Endpoint**: `POST /flights/{flightNumber}/bookings`
+- **Request Body**:
+  ```json
+  {
+    "passengerName": "John Doe",
+    "passengerEmail": "john@example.com",
+    "seatCount": 2
+  }
+  ```
+- **Response**:
+  - **201 Created**: Booking created successfully. Returns booking object with:
+    - `bookingId` (UUID)
+    - `flightNumber`
+    - `passengerName`, `passengerEmail`
+    - `seatCount`
+    - `status` = "CONFIRMED"
+    - `createdAt` (Instant)
+    - **Flight's `availableSeats` is atomically decremented by `seatCount`**
+  - **400 Bad Request**: Invalid input:
+    - `passengerName` or `passengerEmail` is null/empty
+    - `seatCount` <= 0
+  - **404 Not Found**: Flight with `flightNumber` does not exist.
+  - **409 Conflict**: Not enough available seats (`availableSeats < seatCount`). No overbooking allowed.
+
 ## Build & Run
 
 ### Prerequisites
@@ -82,6 +109,17 @@ Get a flight:
 curl http://localhost:8080/flights/FL001
 ```
 
+Create a booking:
+```bash
+curl -X POST http://localhost:8080/flights/FL001/bookings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "passengerName": "John Doe",
+    "passengerEmail": "john@example.com",
+    "seatCount": 2
+  }'
+```
+
 Check health:
 ```bash
 curl http://localhost:8080/actuator/health
@@ -94,8 +132,17 @@ curl http://localhost:8080/actuator/health
   - `departureTime` must not be null
   - `totalSeats` must be > 0
   - `flightNumber` must be unique (duplicates return 400)
-- **Thread Safety**: In-memory repositories use `ConcurrentHashMap` for thread-safe operations
-- **Time Format**: `departureTime` uses `java.time.Instant` (ISO 8601 format in JSON)
+  - `passengerName`, `passengerEmail` must not be null or empty (for bookings)
+  - `seatCount` must be > 0 (for bookings)
+- **Thread Safety**: 
+  - In-memory repositories use `ConcurrentHashMap` for thread-safe storage
+  - **Booking creation uses synchronization on the flight object** to ensure atomicity:
+    - Read available seats
+    - Check if overbooking would occur
+    - Atomically decrement available seats
+    - Save booking
+  - Two concurrent booking requests for the same flight are serialized, preventing overbooking
+- **Time Format**: `departureTime` and `createdAt` use `java.time.Instant` (ISO 8601 format in JSON)
 - **Storage**: All data is stored in-memory and lost on application restart
 - **No Authentication**: No authentication/authorization layer implemented
 
